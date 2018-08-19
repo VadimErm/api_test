@@ -15,19 +15,54 @@ $config = [
         'request' => [
             // !!! insert a secret key in the following (if it is empty) - this is required by cookie validation
             'cookieValidationKey' => 'VhffQp58qQ04EWhw5B1oUihs81BrmTyI',
+            'parsers' => [
+                'application/json' => 'yii\web\JsonParser',
+            ]
+        ],
+        'response' => [
+            'class' => 'yii\web\Response',
+            'on beforeSend' => function ($event) {
+                $response = $event->sender;
+                if (!$response->isSuccessful) {
+                    switch ($response->data['name']) {
+                        case 'MissingParameterException':
+                            $response->data = ['error'=> 'missing parameter'];
+                            $response->statusCode = 400;
+                            break;
+                        case 'Unauthorized' :
+                            $response->data = ['error' => 'access denied'];
+                            $response->statusCode = 401;
+                            break;
+                        default :
+                            $response->data = ['error' => 'internal error'];
+                            $response->statusCode = 500;
+                    }
+                }
+            },
+        ],
+        'authClientCollection' => [
+            'class' => 'yii\authclient\Collection',
+            'clients' => [
+                'twitter' => [
+                    'class' => 'yii\authclient\clients\Twitter',
+                    'attributeParams' => [
+                        'include_email' => 'true'
+                    ],
+                    'consumerKey' => 'VXD22AD9kcNyNgsfW6cwkWRkw',
+                    'consumerSecret' => 'y0k3z9Y46V0DMAKGe4Az2aDtqNt9aXjg3ssCMCldUheGBT0YL9',
+                ],
+            ],
         ],
         'cache' => [
             'class' => 'yii\caching\FileCache',
         ],
         'user' => [
             'identityClass' => 'app\models\User',
-            'enableAutoLogin' => true,
+            'enableAutoLogin' => false,
+            'enableSession' => false
         ],
         'errorHandler' => [
             'errorAction' => 'site/error',
-        ],
-        'authManager' => [
-            'class' => 'yii\rbac\DbManager',
         ],
         'mailer' => [
             'class' => 'yii\swiftmailer\Mailer',
@@ -46,14 +81,24 @@ $config = [
             ],
         ],
         'db' => $db,
-        /*
         'urlManager' => [
             'enablePrettyUrl' => true,
+            'enableStrictParsing' => false,
             'showScriptName' => false,
             'rules' => [
+                [
+                    'class' => 'yii\rest\UrlRule',
+                    'controller' => 'api',
+                    'extraPatterns' => [
+                        'GET add' => 'add',
+                        'GET remove' => 'remove',
+                        'GET feed' => 'feed'
+                    ],
+
+                ],
+
             ],
         ],
-        */
     ],
     'params' => $params,
 ];
